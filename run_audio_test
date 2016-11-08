@@ -1,0 +1,7 @@
+# have a tone playing before you run this
+
+from AudioFrequency import AudioFrequency
+
+obj = AudioFrequency()
+obj.start()
+obj.frequency_response()
