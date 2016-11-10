@@ -17,12 +17,19 @@ class AudioFrequency:
     SAVE_FILE = False 
     
     def __init__(self):
-        print("init test")
+        #TBC
+        print('')
         
+<<<<<<< HEAD
     def start_stream(self):
         audio = pyaudio.PyAudio()
         #start audio stream
         self.stream = audio.open(format=self.FORMAT,
+=======
+    def start(self):
+        # start Recording
+        stream = self.audio.open(format=self.FORMAT,
+>>>>>>> new-plot
                                  channels=self.CHANNELS,
                                  rate=self.RATE,
                                  input=True,
@@ -35,7 +42,12 @@ class AudioFrequency:
         ax.set_xlim(0, 5000)
         ax.set_ylim(0, 0.1)
         self.line, = ax.plot([],[])
-        self.line2, = ax.plot([],[], 'o')  
+        self.line2, = ax.plot([],[], 'o')
+        self.text = pp.text(1,0.1,"  {:.2f}Hz".format(0)
+        
+        pp.ylabel('Power')
+        pp.xlabel('Frequency [Hz]')
+        pp.xscale('log')
 
     def frequency_response(self, data):
         
@@ -62,8 +74,41 @@ class AudioFrequency:
         for i in range(0,len(frames)):
             decoded = np.fromstring(frames[i], 'Float32');
             self.data = np.concatenate((self.data,decoded))
+<<<<<<< HEAD
         #get frequencyresponse
         FreqResponse = self.frequency_response(self.data)
+=======
+        
+    def frequency_response(self):
+        L = 2**int(np.ceil(np.log2(len(self.data)))) #pad to next power of 2 for efficiency      
+        Y = np.fft.fft(self.data,L)
+        P2 = np.abs(Y/L)
+        P1 = 2*P2[0:int(L/2)+1];
+        F = self.RATE/2 * np.linspace(0,1,L/2+1)
+        #F = np.fft.fftfreq(L,d=1/float(RATE))
+        ind = P1.argmax()
+        
+        #plots:
+        #fig = pp.figure()
+        #ax = pp.axes()
+        
+        sb.set_style("darkgrid")
+        l = pp.plot(F,P1)
+        pp.plot(F[ind],P1[ind],'o',color=l[0].get_color())
+        pp.ylabel('Power')
+        pp.xlabel('Frequency [Hz]')
+        pp.xscale('log')
+
+        pp.text(F[ind],P1[ind],"  {:.2f}Hz".format(F[ind]),
+        horizontalalignment='left',
+        verticalalignment='center')
+        
+        #pp.show()
+        pp.xlim(100,1000)
+    def load_440(self):
+        self.data = np.load('Sine_440_Float.npy')
+
+>>>>>>> new-plot
 
         self.line.set_data(FreqResponse[0], FreqResponse[1])
         self.line2.set_data(FreqResponse[0][FreqResponse[2]], FreqResponse[1][FreqResponse[2]]) #max frequency
