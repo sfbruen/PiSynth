@@ -54,7 +54,7 @@ class AudioFrequency:
         L = 2**int(np.ceil(np.log2(len(data)))) #pad to next power of 2 for efficiency
         Y = np.fft.fft(data,L)
         P2 = np.abs(Y/L)
-        P1 = 2*P2[0:int(L/2)+1]; #L/2 not integer
+        P1 = 2*P2[0:L/2+1];
         F = self.RATE/2 * np.linspace(0,1,L/2+1)
         #F = np.fft.fftfreq(L,d=1/float(RATE))  
         ind = P1.argmax()
