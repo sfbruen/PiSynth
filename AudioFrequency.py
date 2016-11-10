@@ -18,13 +18,14 @@ class AudioFrequency():
     
     def __init__(self):
         print("init test")
+        print("Type 'pause' to pause the plot and 'continue' to continue plotting, or click on the axes")
     
     def check_input(self):
         while True:
-            command = input().lower()
+            command = input()
             if self.plot_paused == False and command == "pause":
                 self.pause_plot()
-            elif self.plot_paused == True and command == "unpause":
+            elif self.plot_paused == True and command == "continue":
                 self.start_plot()
     
     def connect(self):
@@ -99,7 +100,6 @@ class AudioFrequency():
         return line_data
     
     def animation(self): 
-        self.start_stream()
         self.animate = FuncAnimation(self.fig, self.update, interval=50, blit=True)
         pp.show()
 
