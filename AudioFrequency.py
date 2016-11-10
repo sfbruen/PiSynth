@@ -1,6 +1,5 @@
 from matplotlib.animation import FuncAnimation
 import pyaudio
-import wave
 import matplotlib.pyplot as pp
 import seaborn as sb
 import numpy as np
@@ -8,11 +7,11 @@ import numpy as np
 # http://onlinetonegenerator.com/
 # audio read based on https://gist.github.com/mabdrabo/8678538
 
-class AudioFrequency:
+class AudioFrequency():
     RATE = 44100
     FORMAT = pyaudio.paFloat32
     CHUNK = 1024
-    RECORD_SECONDS = 0.05
+    RECORD_SECONDS = 0.1
     CHANNELS = 1
     WAVE_OUTPUT_FILENAME = "file.wav"
     SAVE_FILE = False 
@@ -20,20 +19,24 @@ class AudioFrequency:
     def __init__(self):
         print("init test")
     
+    def check_input(self):
+        while True:
+            command = input().lower()
+            if self.plot_paused == False and command == "pause":
+                self.pause_plot()
+            elif self.plot_paused == True and command == "unpause":
+                self.start_plot()
+    
     def connect(self):
-        self.cidpress = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
-        self.pause_plot = False
-        
+        self.cidpress = self.fig.canvas.mpl_connect("button_press_event", self.onclick)
+        self.plot_paused = False
+            
     def onclick(self, event):
         if event.inaxes:
-            if self.pause_plot == False:
-                print("Pausing plot...")
-                self.animate.event_source.stop()
-                self.pause_plot = True
+            if self.plot_paused == False:
+                self.pause_plot()
             else:
-                print("Starting plot...")
-                self.animate.event_source.start()
-                self.pause_plot = False
+                self.start_plot()
                           
     def start_stream(self):
         audio = pyaudio.PyAudio()
@@ -49,8 +52,18 @@ class AudioFrequency:
         ax.set_xlim(0, 5000)
         ax.set_ylim(0, 0.1)
         self.line, = ax.plot([],[])
-        self.line2, = ax.plot([],[], 'o')  
-
+        self.line2, = ax.plot([],[], 'o') 
+    
+    def pause_plot(self):
+        print("Pausing plot...")
+        self.animate.event_source.stop()
+        self.plot_paused = True
+        
+    def start_plot(self):
+        print("Starting plot...")
+        self.animate.event_source.start()
+        self.plot_paused = False
+        
     def frequency_response(self, data):
         
         L = 2**int(np.ceil(np.log2(len(data)))) #pad to next power of 2 for efficiency
@@ -70,9 +83,8 @@ class AudioFrequency:
             #take multiple blocks of data from stream
         for i in range(0, int(self.RATE / self.CHUNK * self.RECORD_SECONDS)):
             incoming = self.stream.read(self.CHUNK)
-            #incoming = self.testfile[int(self.CHUNK*i):int(self.CHUNK*(i+1))]
             frames.append(incoming)
-            #incoming = 0
+
         #merge blocks of data into single float vector    
         self.data = np.empty(1)
         for i in range(0,len(frames)):
@@ -87,7 +99,9 @@ class AudioFrequency:
         return line_data
     
     def animation(self): 
-        self.animate = FuncAnimation(self.fig, self.update, interval=20)
+        self.start_stream()
+        self.animate = FuncAnimation(self.fig, self.update, interval=50, blit=True)
         pp.show()
-    
+
+                
         
