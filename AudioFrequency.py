@@ -22,7 +22,12 @@ class AudioFrequency:
     def start_stream(self):
         audio = pyaudio.PyAudio()
         #start audio stream
-        self.stream = audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK)
+        self.stream = audio.open(format=self.FORMAT,
+                                 channels=self.CHANNELS,
+                                 rate=self.RATE,
+                                 input=True,
+                                 frames_per_buffer=self.CHUNK)
+        
     def setup_plot(self):
         #setup the plot that will display FFT
         self.fig = pp.figure()
@@ -59,6 +64,7 @@ class AudioFrequency:
             self.data = np.concatenate((self.data,decoded))
         #get frequencyresponse
         FreqResponse = self.frequency_response(self.data)
+
         self.line.set_data(FreqResponse[0], FreqResponse[1])
         self.line2.set_data(FreqResponse[0][FreqResponse[2]], FreqResponse[1][FreqResponse[2]]) #max frequency
         line_data.append(self.line)
@@ -66,7 +72,7 @@ class AudioFrequency:
         return line_data
     
     def animation(self): 
-        animate = FuncAnimation(self.fig, self.update, interval=10)
+        self.animate = FuncAnimation(self.fig, self.update, interval=50)
         pp.show()
-    
+        
         
