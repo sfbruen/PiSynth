@@ -19,13 +19,29 @@ class AudioFrequency:
     
     def __init__(self):
         print("init test")
+    
+    def connect(self):
+        self.cidpress = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+        self.pause_plot = False
         
+    def onclick(self, event):
+        if event.inaxes:
+            if self.pause_plot == False:
+                print("Pausing plot...")
+                self.animate.event_source.stop()
+                self.pause_plot = True
+            else:
+                print("Starting plot...")
+                self.animate.event_source.start()
+                self.pause_plot = False
+                          
     def start_stream(self):
         audio = pyaudio.PyAudio()
         #start audio stream
-        #self.testfile = np.load('test-data.npy')
         self.stream = audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK, output=True)
-        
+        self.setup_plot()
+        self.connect()
+    
     def setup_plot(self):
         #setup the plot that will display FFT
         self.fig = pp.figure()
@@ -68,11 +84,10 @@ class AudioFrequency:
         self.line2.set_data(FreqResponse[0][FreqResponse[2]], FreqResponse[1][FreqResponse[2]]) #max frequency
         line_data.append(self.line)
         line_data.append(self.line2)
-        print(frame_number)
         return line_data
     
     def animation(self): 
-        animate = FuncAnimation(self.fig, self.update, interval=20)
+        self.animate = FuncAnimation(self.fig, self.update, interval=20)
         pp.show()
     
         
