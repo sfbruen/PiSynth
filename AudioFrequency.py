@@ -1,5 +1,6 @@
 from matplotlib.animation import FuncAnimation
 import pyaudio
+import wave
 import matplotlib.pyplot as pp
 import seaborn as sb
 import numpy as np
@@ -11,7 +12,7 @@ class AudioFrequency:
     RATE = 44100
     FORMAT = pyaudio.paFloat32
     CHUNK = 1024
-    RECORD_SECONDS = 0.1
+    RECORD_SECONDS = 0.05
     CHANNELS = 1
     WAVE_OUTPUT_FILENAME = "file.wav"
     SAVE_FILE = False 
@@ -22,7 +23,9 @@ class AudioFrequency:
     def start_stream(self):
         audio = pyaudio.PyAudio()
         #start audio stream
-        self.stream = audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK)
+        #self.testfile = np.load('test-data.npy')
+        self.stream = audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK, output=True)
+        
     def setup_plot(self):
         #setup the plot that will display FFT
         self.fig = pp.figure()
@@ -48,25 +51,28 @@ class AudioFrequency:
     def update(self, frame_number):
         line_data = []
         frames = []
-        #take multiple blocks of data from stream
+            #take multiple blocks of data from stream
         for i in range(0, int(self.RATE / self.CHUNK * self.RECORD_SECONDS)):
             incoming = self.stream.read(self.CHUNK)
+            #incoming = self.testfile[int(self.CHUNK*i):int(self.CHUNK*(i+1))]
             frames.append(incoming)
-            #merge blocks of data into single float vector    
+            #incoming = 0
+        #merge blocks of data into single float vector    
         self.data = np.empty(1)
         for i in range(0,len(frames)):
             decoded = np.fromstring(frames[i], 'Float32');
             self.data = np.concatenate((self.data,decoded))
-        #get frequencyresponse
+            #get frequencyresponse
         FreqResponse = self.frequency_response(self.data)
         self.line.set_data(FreqResponse[0], FreqResponse[1])
         self.line2.set_data(FreqResponse[0][FreqResponse[2]], FreqResponse[1][FreqResponse[2]]) #max frequency
         line_data.append(self.line)
         line_data.append(self.line2)
+        print(frame_number)
         return line_data
     
     def animation(self): 
-        animate = FuncAnimation(self.fig, self.update, interval=10)
+        animate = FuncAnimation(self.fig, self.update, interval=20)
         pp.show()
     
         
