@@ -19,6 +19,18 @@ class AudioFrequency:
     
     def __init__(self):
         print("init test")
+    
+    def connect(self):
+        #setup for detecting mouse button pressed on plot
+        self.cidpress = self.fig.canvas.mpl_connect("button_press_event", self.onclick)
+        self.plot_paused = False
+            
+    def onclick(self, event):
+        if event.inaxes:
+            if self.plot_paused == False:
+                self.pause_plot()
+            else:
+                self.start_plot()
         
     def start_stream(self):
         audio = pyaudio.PyAudio()
@@ -36,6 +48,18 @@ class AudioFrequency:
         ax.set_ylim(0, 0.1)
         self.line, = ax.plot([],[])
         self.line2, = ax.plot([],[], 'o')  
+    
+    def pause_plot(self):
+        #pause animation
+        print("Pausing plot...")
+        self.animate.event_source.stop()
+        self.plot_paused = True
+        
+    def start_plot(self):
+        #restart animation
+        print("Starting plot...")
+        self.animate.event_source.start()
+        self.plot_paused = False
 
     def frequency_response(self, data):
         
