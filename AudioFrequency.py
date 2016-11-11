@@ -45,7 +45,8 @@ class AudioFrequency():
         self.stream = audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK, output=True)
         self.setup_plot()
         self.connect()
-    
+        self.animation()
+        
     def setup_plot(self):
         #setup the plot that will display FFT
         self.fig = pp.figure()
