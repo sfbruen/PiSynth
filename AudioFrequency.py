@@ -48,7 +48,7 @@ class AudioFrequency:
 #        ax = self.fig.add_subplot(111)
         self.fig, (ax1, ax2) = pp.subplots(2,1)
 
-        ax1.set_xlim(0, 1000)
+        ax1.set_xlim(0, 5000)
         ax1.set_ylim(0, 0.04)
         ax2.set_xlim(0,100)
         ax2.set_ylim(10, 1000)
