@@ -1,5 +1,6 @@
 from matplotlib.animation import FuncAnimation
 import pyaudio
+import threading
 import matplotlib.pyplot as pp
 import seaborn as sb
 import numpy as np
@@ -14,30 +15,34 @@ class AudioFrequency():
     RECORD_SECONDS = 0.1
     CHANNELS = 1
     WAVE_OUTPUT_FILENAME = "file.wav"
-    SAVE_FILE = False 
+    SAVE_FILE = False
+    pausing = False
     
     def __init__(self):
         print("init test")
         print("Type 'pause' to pause the plot and 'continue' to continue plotting, or click on the axes")
     
     def check_input(self):
+        lock = threading.Lock()
         while True:
-            command = input()
-            if self.plot_paused == False and command == "pause":
-                self.pause_plot()
-            elif self.plot_paused == True and command == "continue":
-                self.start_plot()
-    
+            command = input().lower()
+            if command != "":
+                with lock:
+                    if command == "pause":
+                        self.pausing = True
+                    elif command == "continue":
+                        self.pausing = False
+                    else:
+                        print("Command not recognised, please enter either 'pause' or 'continue'")
+                            
     def connect(self):
         self.cidpress = self.fig.canvas.mpl_connect("button_press_event", self.onclick)
-        self.plot_paused = False
+        #self.plot_paused = False
             
     def onclick(self, event):
         if event.inaxes:
-            if self.plot_paused == False:
-                self.pause_plot()
-            else:
-                self.start_plot()
+            self.pausing ^= True
+            
                           
     def start_stream(self):
         audio = pyaudio.PyAudio()
@@ -46,6 +51,11 @@ class AudioFrequency():
         self.setup_plot()
         self.connect()
         self.animation()
+#        while True:
+#            if self.pausing == True:
+#                self.pause_plot()
+#            else:
+#                self.start_plot()
         
     def setup_plot(self):
         #setup the plot that will display FFT
@@ -59,12 +69,12 @@ class AudioFrequency():
     def pause_plot(self):
         print("Pausing plot...")
         self.animate.event_source.stop()
-        self.plot_paused = True
+        #self.plot_paused = True
         
     def start_plot(self):
         print("Starting plot...")
         self.animate.event_source.start()
-        self.plot_paused = False
+        #self.plot_paused = False
         
     def frequency_response(self, data):
         
@@ -82,27 +92,35 @@ class AudioFrequency():
     def update(self, frame_number):
         line_data = []
         frames = []
-            #take multiple blocks of data from stream
-        for i in range(0, int(self.RATE / self.CHUNK * self.RECORD_SECONDS)):
-            incoming = self.stream.read(self.CHUNK)
-            frames.append(incoming)
-
-        #merge blocks of data into single float vector    
-        self.data = np.empty(1)
-        for i in range(0,len(frames)):
-            decoded = np.fromstring(frames[i], 'Float32');
-            self.data = np.concatenate((self.data,decoded))
-            #get frequencyresponse
-        FreqResponse = self.frequency_response(self.data)
-        self.line.set_data(FreqResponse[0], FreqResponse[1])
-        self.line2.set_data(FreqResponse[0][FreqResponse[2]], FreqResponse[1][FreqResponse[2]]) #max frequency
-        line_data.append(self.line)
-        line_data.append(self.line2)
+        if self.pausing == True:
+            line_data.append(self.line)
+            line_data.append(self.line2)
+#            self.pause_plot()
+#        elif self.pausing == False:
+#            self.start_plot()
+        #take multiple blocks of data from stream
+        else:
+            for i in range(0, int(self.RATE / self.CHUNK * self.RECORD_SECONDS)):
+                incoming = self.stream.read(self.CHUNK)
+                frames.append(incoming)
+    
+            #merge blocks of data into single float vector    
+            self.data = np.empty(1)
+            for i in range(0,len(frames)):
+                decoded = np.fromstring(frames[i], 'Float32');
+                self.data = np.concatenate((self.data,decoded))
+                #get frequencyresponse
+            FreqResponse = self.frequency_response(self.data)
+            self.line.set_data(FreqResponse[0], FreqResponse[1])
+            self.line2.set_data(FreqResponse[0][FreqResponse[2]], FreqResponse[1][FreqResponse[2]]) #max frequency
+            line_data.append(self.line)
+            line_data.append(self.line2)
         return line_data
     
     def animation(self): 
         self.animate = FuncAnimation(self.fig, self.update, interval=50, blit=True)
         pp.show()
+
 
                 
         

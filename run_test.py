@@ -3,9 +3,10 @@ import threading
 
 obj = AudioFrequency.AudioFrequency()
 
-#obj.start_stream()
-threading1 = threading.Thread(target=obj.start_stream)
+
+threading1 = threading.Thread(target=obj.check_input)
 threading1.daemon = True
 threading1.start()
-obj.check_input()
+obj.start_stream()
+#obj.check_input()
 
