@@ -1,6 +1,5 @@
 from matplotlib.animation import FuncAnimation
 import pyaudio
-import threading
 import matplotlib.pyplot as pp
 import seaborn as sb
 import numpy as np
@@ -23,23 +22,25 @@ class AudioFrequency():
         print("Type 'pause' to pause the plot and 'continue' to continue plotting, or click on the axes")
     
     def check_input(self):
-        lock = threading.Lock()
         while True:
             command = input().lower()
+            #Check if something has been typed
             if command != "":
-                with lock:
-                    if command == "pause":
-                        self.pausing = True
-                    elif command == "continue":
-                        self.pausing = False
-                    else:
-                        print("Command not recognised, please enter either 'pause' or 'continue'")
+                #Pause plot if 'pause' is typed, restart if 'continue' is typed 
+                if command == "pause":
+                    self.pausing = True
+                elif command == "continue":
+                    self.pausing = False
+                #If one on the two above commands isn't typed, remind user
+                else:
+                    print("Command not recognised, please enter either 'pause' or 'continue'")
                             
     def connect(self):
+        #Setup for detecting mouse button pressed on plot
         self.cidpress = self.fig.canvas.mpl_connect("button_press_event", self.onclick)
-        #self.plot_paused = False
             
     def onclick(self, event):
+        #Change value of 'pausing' when plot area is clicked on
         if event.inaxes:
             self.pausing ^= True
             
@@ -47,15 +48,11 @@ class AudioFrequency():
     def start_stream(self):
         audio = pyaudio.PyAudio()
         #start audio stream
-        self.stream = audio.open(format=self.FORMAT,channels=self.CHANNELS,rate=self.RATE,input=True,frames_per_buffer=self.CHUNK, output=True)
-        self.setup_plot()
-        self.connect()
-        self.animation()
-#        while True:
-#            if self.pausing == True:
-#                self.pause_plot()
-#            else:
-#                self.start_plot()
+        self.stream = audio.open(format=self.FORMAT,
+                                 channels=self.CHANNELS,
+                                 rate=self.RATE,
+                                 input=True,
+                                 frames_per_buffer=self.CHUNK)
         
     def setup_plot(self):
         #setup the plot that will display FFT
@@ -65,16 +62,6 @@ class AudioFrequency():
         ax.set_ylim(0, 0.1)
         self.line, = ax.plot([],[])
         self.line2, = ax.plot([],[], 'o') 
-    
-    def pause_plot(self):
-        print("Pausing plot...")
-        self.animate.event_source.stop()
-        #self.plot_paused = True
-        
-    def start_plot(self):
-        print("Starting plot...")
-        self.animate.event_source.start()
-        #self.plot_paused = False
         
     def frequency_response(self, data):
         
@@ -92,14 +79,13 @@ class AudioFrequency():
     def update(self, frame_number):
         line_data = []
         frames = []
+        #When plot is paused, new data = previous data
         if self.pausing == True:
             line_data.append(self.line)
             line_data.append(self.line2)
-#            self.pause_plot()
-#        elif self.pausing == False:
-#            self.start_plot()
-        #take multiple blocks of data from stream
+        
         else:
+            #take multiple blocks of data from stream
             for i in range(0, int(self.RATE / self.CHUNK * self.RECORD_SECONDS)):
                 incoming = self.stream.read(self.CHUNK)
                 frames.append(incoming)
@@ -109,12 +95,16 @@ class AudioFrequency():
             for i in range(0,len(frames)):
                 decoded = np.fromstring(frames[i], 'Float32');
                 self.data = np.concatenate((self.data,decoded))
-                #get frequencyresponse
+                
+            #get frequencyresponse
             FreqResponse = self.frequency_response(self.data)
+            
             self.line.set_data(FreqResponse[0], FreqResponse[1])
             self.line2.set_data(FreqResponse[0][FreqResponse[2]], FreqResponse[1][FreqResponse[2]]) #max frequency
+            
             line_data.append(self.line)
             line_data.append(self.line2)
+            
         return line_data
     
     def animation(self): 

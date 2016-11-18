@@ -8,5 +8,8 @@ threading1 = threading.Thread(target=obj.check_input)
 threading1.daemon = True
 threading1.start()
 obj.start_stream()
-#obj.check_input()
+obj.setup_plot()
+obj.connect()
+obj.animation()
+
 
