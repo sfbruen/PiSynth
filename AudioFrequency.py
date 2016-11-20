@@ -5,7 +5,7 @@ import seaborn as sb #just importing this formats the plots
 import numpy as np
 from math import ceil
 from datetime import datetime
-from matplotlib.dates import date2num
+from matplotlib.dates import DateFormatter
 
 # http://onlinetonegenerator.com/
 # audio read based on https://gist.github.com/mabdrabo/8678538
@@ -24,7 +24,7 @@ class AudioFrequency:
     
     def connect(self):
         #setup for detecting mouse button pressed on plot
-        self.cidpress = self.fig.canvas.mpl_connect("button_press_event", self.onclick)
+        self.cidpress = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
         self.plot_paused = False
             
     def onclick(self, event):
@@ -57,7 +57,7 @@ class AudioFrequency:
 
         self.line, = self.ax1.plot([],[])
         self.line2, = self.ax1.plot([],[], 'o')
-        self.line3, = self.ax2.plot([],[],'o-')
+        self.line3, = self.ax2.plot(datetime.now(), 0,'o-')
         self.textObj = self.ax1.text(1,0.002," ",
                                   horizontalalignment='left',
                                   verticalalignment='center')
@@ -66,7 +66,21 @@ class AudioFrequency:
         self.ax1.set_xscale("log", nonposx='clip')
         self.ax2.set_ylim(10,10000)
 #        self.ax2.set_yscale("log", nonposy='clip')
-    
+
+        #Remove microseconds from x axis labels
+        self.ax2.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
+        #Display microseconds for cursor position
+        self.ax2.fmt_xdata = DateFormatter('%H:%M:%S.%f')
+        
+        self.ax1.set_ylabel("Amplitude", fontsize=12, fontweight='bold')
+        self.ax1.set_xlabel("Frequency", fontsize=12, fontweight='bold')
+        self.ax2.set_ylabel("Max Frequency", fontsize=12, fontweight='bold')
+        self.ax2.set_xlabel("Time", fontsize=12, fontweight='bold')
+        
+        pp.setp(self.ax2.xaxis.get_majorticklabels(), rotation=30)
+        
+        pp.tight_layout()
+
     def pause_plot(self):
         #pause animation
         print("Pausing plot...")
@@ -120,7 +134,7 @@ class AudioFrequency:
         #update line data for plotting
         self.line.set_data(FreqResponse[0], FreqResponse[1])
         self.line2.set_data(FreqPeak, AmpPeak)        
-        self.line3.set_data(date2num(self.time_data), self.peak_data)
+        self.line3.set_data(self.time_data, self.peak_data)
         self.textObj.set_text("{:.2f}Hz".format(FreqPeak))
         self.textObj.set_x(FreqPeak)
         self.textObj.set_y(AmpPeak)
