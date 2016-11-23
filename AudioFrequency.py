@@ -10,29 +10,42 @@ from matplotlib.dates import DateFormatter
 # http://onlinetonegenerator.com/
 # audio read based on https://gist.github.com/mabdrabo/8678538
 
-class AudioFrequency:
+class AudioFrequency():
     RATE = 44100
     FORMAT = pyaudio.paFloat32
-    CHUNK = 1024 * 2
+    CHUNK = 1024 * 4
     RECORD_SECONDS = 0.2
     CHANNELS = 1
     PLOT_SECONDS = 5
+    pausing = False
     
     def __init__(self):
         self.peak_data =  [] #peak frequency timeseries
         self.time_data = []
-    
+        print("Type 'pause' to pause the plot and 'continue' to continue plotting, or click on the axes")
+
+    def check_input(self):
+        while True:
+            command = input().lower()
+                #Check if something has been typed
+            if command != "":
+                #Pause plot if 'pause' is typed, restart if 'continue' is typed
+                if command == "pause":
+                    self.pausing = True
+                elif command == "continue":
+                    self.pausing = False
+                #If one on the two above commands isn't typed, remind user
+                else:
+                    print("Command not recognised, please enter either 'pause' or 'continue'")
+
     def connect(self):
-        #setup for detecting mouse button pressed on plot
-        self.cidpress = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
-        self.plot_paused = False
-            
+        #Setup for detecting mouse button pressed on plot
+        self.cidpress = self.fig.canvas.mpl_connect("button_press_event", self.onclick)
+    
     def onclick(self, event):
+        #Change value of 'pausing' when plot area is clicked on
         if event.inaxes:
-            if self.plot_paused == False:
-                self.pause_plot()
-            else:
-                self.start_plot()        
+            self.pausing ^= True
     
     @property
     def num_chunks(self):
@@ -41,7 +54,8 @@ class AudioFrequency:
     @property
     def num_peaks_time(self):
         return ceil(self.PLOT_SECONDS / self.RECORD_SECONDS)
-        
+
+
     def start_stream(self):
         audio = pyaudio.PyAudio()
         #start audio stream
@@ -78,8 +92,7 @@ class AudioFrequency:
         self.ax2.set_xlabel("Time", fontsize=12, fontweight='bold')
         
         pp.setp(self.ax2.xaxis.get_majorticklabels(), rotation=30)
-        
-        pp.tight_layout()
+#        pp.tight_layout()
 
     def pause_plot(self):
         #pause animation
@@ -107,57 +120,67 @@ class AudioFrequency:
     def update(self, frame_number):
         line_data = []
         frames = []
-        #take multiple blocks of data from stream
-        for i in range(0, self.num_chunks):
-            incoming = self.stream.read(self.CHUNK)
-            frames.append(incoming)
 
-        self.time_data.append(datetime.now())
-
-        #merge blocks of data into single float vector    
-        audio_data = np.empty(1)
-        for i in range(0,len(frames)):
-            decoded = np.fromstring(frames[i], 'Float32');
-            audio_data = np.concatenate((audio_data,decoded))
-
-        #get frequency response
-        FreqResponse = self.frequency_response(audio_data[1:-1])
-        AmpPeak = FreqResponse[1][FreqResponse[2]]
-        FreqPeak = FreqResponse[0][FreqResponse[2]]
-        
-        # add new timeseries peak data, and remove old data if necessary
-        self.peak_data.append(float(FreqPeak))
-        if len(self.peak_data) == self.num_peaks_time:
-            del self.peak_data[0]
-            del self.time_data[0]
+        #When plot is paused, new data = previous data
+        if self.pausing == True:
+            line_data.append(self.line)
+            line_data.append(self.line2)
+            line_data.append(self.line3)
+    
+        else:
+            #take multiple blocks of data from stream
+            for i in range(0, self.num_chunks):
+                incoming = self.stream.read(self.CHUNK)
+                frames.append(incoming)
+    
+            self.time_data.append(datetime.now())
+    
+            #merge blocks of data into single float vector    
+            audio_data = np.empty(1)
+            for i in range(0,len(frames)):
+                decoded = np.fromstring(frames[i], 'Float32');
+                audio_data = np.concatenate((audio_data,decoded))
+    
+            #get frequency response
+            FreqResponse = self.frequency_response(audio_data[1:-1])
+            AmpPeak = FreqResponse[1][FreqResponse[2]]
+            FreqPeak = FreqResponse[0][FreqResponse[2]]
             
-        #update line data for plotting
-        self.line.set_data(FreqResponse[0], FreqResponse[1])
-        self.line2.set_data(FreqPeak, AmpPeak)        
-        self.line3.set_data(self.time_data, self.peak_data)
-        self.textObj.set_text("{:.2f}Hz".format(FreqPeak))
-        self.textObj.set_x(FreqPeak)
-        self.textObj.set_y(AmpPeak)
-
-        #update axes limits
-#        PeakLog = float(np.log10(FreqPeak))
-#        self.ax1.set_xlim(10**(PeakLog-1), 10**(PeakLog+1))
-        self.ax1.set_xlim(0.2*FreqPeak , 5*FreqPeak)
-        self.ax1.set_ylim(0, max(FreqResponse[1])*1.1)
-        
-        if len(self.time_data) > 1:
-            self.ax2.set_xlim(self.time_data[0], self.time_data[-1])
-            self.ax2.set_ylim(min(self.peak_data)*0.9, max(self.peak_data)*1.1)
-        
-        line_data.append(self.line)
-        line_data.append(self.line2)
-        line_data.append(self.line3)        
-        # does textobj need to be added too?
+            # add new timeseries peak data, and remove old data if necessary
+            self.peak_data.append(float(FreqPeak))
+            if len(self.peak_data) == self.num_peaks_time:
+                del self.peak_data[0]
+                del self.time_data[0]
+                
+            #update line data for plotting
+            self.line.set_data(FreqResponse[0], FreqResponse[1])
+            self.line2.set_data(FreqPeak, AmpPeak)        
+            self.line3.set_data(self.time_data, self.peak_data)
+            self.textObj.set_text("{:.2f}Hz".format(FreqPeak))
+            self.textObj.set_x(FreqPeak)
+            self.textObj.set_y(AmpPeak)
+    
+            #update axes limits
+    #        PeakLog = float(np.log10(FreqPeak))
+    #        self.ax1.set_xlim(10**(PeakLog-1), 10**(PeakLog+1))
+            self.ax1.set_xlim(0.2*FreqPeak , 5*FreqPeak)
+            self.ax1.set_ylim(0, max(FreqResponse[1])*1.1)
+            
+            if len(self.time_data) > 1:
+                self.ax2.set_xlim(self.time_data[0], self.time_data[-1])
+                self.ax2.set_ylim(min(self.peak_data)*0.9, max(self.peak_data)*1.1)
+            
+            line_data.append(self.line)
+            line_data.append(self.line2)
+            line_data.append(self.line3)        
+            # does textobj need to be added too?
 
         return line_data
     
     def animation(self): 
-        self.animate = FuncAnimation(self.fig, self.update, interval=100,blit=False)
+        self.animate = FuncAnimation(self.fig, self.update, interval=50, blit=False)
         pp.show()
-    
+
+
+                
         
