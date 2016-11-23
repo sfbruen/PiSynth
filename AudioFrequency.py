@@ -13,7 +13,7 @@ from matplotlib.dates import DateFormatter
 class AudioFrequency():
     RATE = 44100
     FORMAT = pyaudio.paFloat32
-    CHUNK = 1024 * 4
+    CHUNK = 1024 * 2
     RECORD_SECONDS = 0.2
     CHANNELS = 1
     PLOT_SECONDS = 5
@@ -130,7 +130,7 @@ class AudioFrequency():
         else:
             #take multiple blocks of data from stream
             for i in range(0, self.num_chunks):
-                incoming = self.stream.read(self.CHUNK)
+                incoming = self.stream.read(self.CHUNK,exception_on_overflow=False)
                 frames.append(incoming)
     
             self.time_data.append(datetime.now())
@@ -165,11 +165,18 @@ class AudioFrequency():
     #        self.ax1.set_xlim(10**(PeakLog-1), 10**(PeakLog+1))
             self.ax1.set_xlim(0.2*FreqPeak , 5*FreqPeak)
             self.ax1.set_ylim(0, max(FreqResponse[1])*1.1)
-            
-            if len(self.time_data) > 1:
+        
+            if len(self.peak_data) > 1:
+#                update time axes once more than one reading is available
                 self.ax2.set_xlim(self.time_data[0], self.time_data[-1])
+
+            if len(set(self.peak_data)) > 1:
+#                rescale based on min and max freq
                 self.ax2.set_ylim(min(self.peak_data)*0.9, max(self.peak_data)*1.1)
-            
+            else:
+                #only one frequency value in vector (or the first sample):
+                self.ax2.set_ylim(0.9*self.peak_data[0] , 1.1*self.peak_data[0])
+        
             line_data.append(self.line)
             line_data.append(self.line2)
             line_data.append(self.line3)        
