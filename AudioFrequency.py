@@ -142,9 +142,12 @@ class AudioFrequency():
                 audio_data = np.concatenate((audio_data,decoded))
     
             #get frequency response
-            FreqResponse = self.frequency_response(audio_data[1:-1])
+            FreqResponse = self.frequency_response(audio_data[1:])
             AmpPeak = FreqResponse[1][FreqResponse[2]]
             FreqPeak = FreqResponse[0][FreqResponse[2]]
+            
+            Freq_Estimate = self.estimateWaveFreq(audio_data[1:])
+            print("{0:.2f}Hz".format(Freq_Estimate))
             
             # add new timeseries peak data, and remove old data if necessary
             self.peak_data.append(float(FreqPeak))
@@ -187,6 +190,66 @@ class AudioFrequency():
     def animation(self): 
         self.animate = FuncAnimation(self.fig, self.update, interval=50, blit=False)
         pp.show()
+        
+    def estimateWaveFreq(self,y):
+        minCrossPts = 10; #if number of points is below this number, treat it as noise
+        minAmplitude = 1e-3;
+        
+        #t = np.array(range(y.size)).astype("double")/Fs #is this a weird way of doing it?
+        t = np.arange(0,y.size,dtype="double")/self.RATE
+        
+        #find zero crossing points
+        zDown = (y[:-1] > 0) & (y[1:] <= 0) #zero crossing downwards
+        zUp = (y[:-1] <= 0) & (y[1:] > 0) #zero crossing upwards
+        
+        indDown = np.nonzero(zDown)[0]
+        indUp = np.nonzero(zUp)[0]
+        #clip to same length (one might be 1 longer than the other if recording stops during half wave)
+        if indDown.size > indUp.size:
+            indDown = indDown[:-1]
+        elif indDown.size < indUp.size:
+            indUp = indUp[:-1]
+        
+        #get the frequency based on the inverse of the time period
+        FDown = 1/np.diff(t[indDown])
+        FUp = 1/np.diff(t[indUp])
+        
+        #do some processing to get rid of bad values (noisy signal, quiet signal)
+        for n in range(indDown.size-1):
+            vecDown = np.arange(indDown[n],indDown[n+1])
+            if vecDown.size < minCrossPts:
+                indDown[n] = -1#would use NaN but array is int
+                FDown[n] = np.nan
+            elif max(np.fabs(y[vecDown])) < minAmplitude:
+                indDown[n] = -1#would use NaN but array is int
+                FDown[n] = np.nan
+                
+            vecUp = np.arange(indUp[n],indUp[n+1])
+            if vecUp.size < minCrossPts:
+                indUp[n] = -1#would use NaN but array is int
+                FUp[n] = np.nan
+            elif max(np.fabs(y[vecUp])) < minAmplitude:
+                indUp[n] = -1#would use NaN but array is int
+                FUp[n] = np.nan
+            
+        #remove values detected as bad
+        indDown = indDown[:-1]
+        indUp = indUp[:-1]
+        chk = (indUp > 0) & (indDown > 0)
+        indUp = indUp[chk]
+        indDown = indDown[chk]
+        FUp = FUp[chk]
+        FDown = FDown[chk]
+        
+#        T = 0.5*(t[indUp] + t[indDown])
+        F = 0.5*(FDown+FUp)
+        
+#        nanmean throws a warning if all nans passed to it
+        if ~np.all(np.isnan(F)):
+            F_Mean = np.nanmean(F)
+        else:
+            F_Mean = np.nan
+        return F_Mean
 
 
                 
